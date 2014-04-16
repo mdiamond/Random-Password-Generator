@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /* Define booleans */
 typedef short bool;
@@ -14,27 +15,54 @@ bool lowercase_letters = false;
 bool symbols = false;
 bool digits = false;
 
+/* True if on the final argument, false if not */
+bool on_final_arg = false;
+
+/* True if user wants to use a custom seed, false if not */
+bool custom_seed = false;
+
+/* Seed for random number generator */
+unsigned int seed;
+
 /* Characters */
 char uppercase[26] = {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 
 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'};
+char lowercase[26];
 char digit[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
 char symbol[4] = {'~', '@', '#', '&'};
 
-/* ***************************************************************** */
-/*                                                                   */
-/*                                                                   */
-/* ***************************************************************** */
+/* Error messages */
+char *final_arg =
+"The final argument must be a number representing the desired password length.\n"
+"Please pass argument '-h' for instructions.\n";
+char *no_args =
+"No arguments passed.\nPlease pass argument '-h' for instructions.\n";
+char *no_chars_selected =
+"You must select at least one type of character to "
+"include in your password.\nPlease pass argument '-h' for instructions.\n";
+char *no_seed =
+"The argument following '-c' must be your custom seed (as an integer).\n"
+"Please pass argument '-h' for instructions.\n";
 
-/* Convert the passed character into lowercase */
-char
-upper_to_lower (char ch) 
-{
-  return  ch + 32;
-}
+/* Help message */
+char *help_message = 
+"At least one of the following arguments must be passed, "
+"more than one may be passed:\n"
+"'-u' will select possible characters from uppercase letters (A, B, C ... Z)\n"
+"'-l' will select possible characters from lowercase letters (a, b, c ... z)\n"
+"'-s' will select possible characters from symbols (~, @, #, &)\n"
+"'-d' will select possible characters from digits (0, 1, 2 ... 9)\n"
+"'-a' will select possible characters from all of the above\n"
+"'-c' will allow the user to specify a seed for random number generation "
+"and will attempt to use the following argument as the seed\n"
+"'-h' will print this help message\n"
+"The final argument must be a number representing the desired password length.\n";
+
+/* Function prototypes */
+bool is_number (char *);
 
 /* ***************************************************************** */
-/*                                                                   */
-/*                                                                   */
+/* GENERATOR                                                         */
 /* ***************************************************************** */
 
 /* Generate and print a random string with the desired characteristics */
@@ -45,21 +73,13 @@ generate (int length)
   /* Calculate how many possible characters there are */
   int num_options = 0;
   if(uppercase_letters)
-  {
     num_options += 26;
-  }
   if(lowercase_letters)
-  {
     num_options += 26;
-  }
   if(digits)
-  {
     num_options += 10;
-  }
   if(symbols)
-  {
     num_options += 4;
-  }
 
   /* Character array for the possible characters */
   char options[num_options];
@@ -76,19 +96,19 @@ generate (int length)
       i_2 ++;
     }
   }
-  i = 0;
   if(lowercase_letters)
   {
+		i = 0;
     while(i < 26)
     {
-      options[i_2] = upper_to_lower(uppercase[i]);
+      options[i_2] = lowercase[i];
       i ++;
       i_2 ++;
     }
   }
-  i = 0;
   if(digits)
   {
+		i = 0;
     while(i < 10)
     {
       options[i_2] = digit[i];
@@ -96,9 +116,9 @@ generate (int length)
       i_2 ++;
     }
   }
-  i = 0;
   if(symbols)
   {
+		i = 0;
     while(i < 4)
     {
       options[i_2] = symbol[i];
@@ -112,7 +132,9 @@ generate (int length)
   buffer[length] = '\0';
 
   /* Set the seed for the random number generator */
-  srand(time(NULL));
+  if(!custom_seed)
+    seed = time(NULL);
+  srand(seed);
 
   /* Generate the string */
   i = 0;
@@ -127,20 +149,18 @@ generate (int length)
 } 
 
 /* ***************************************************************** */
-/*                                                                   */
-/*                                                                   */
+/* ARGUMENT SCANNER                                                  */
 /* ***************************************************************** */
 
 /* Scan arguments */
 void
-scanargs(char *s)
+scan_argument (char *str)
 {
 
   /* Scan through arguments to determine what ASCII characters are desired */
-  while (*s != '\0' && *s != ' ')
+  while (*str != '\0' && *str != ' ')
   {
-
-    switch (*s ++)
+    switch (*str ++)
   	{
 
     	/* Use uppercase letters in the password */
@@ -171,64 +191,109 @@ scanargs(char *s)
   			digits = true;
         break;
 
+      /* Use a custom seed */
+			case 'c':
+				custom_seed = true;
+				str ++;
+        while(*str == ' ')
+          str ++;
+        char* end;
+				if(is_number(str))
+          seed = strtoul(str, &end, 10);
+        else
+        {
+          printf("%s", no_seed);
+          exit(0);
+        }
+        while(*str != ' ' && *str != '\0')
+          str ++;
+        if(on_final_arg)
+        {
+          printf("%s", final_arg);
+          exit(0);
+        }
+				break;
+
       /* Print instructions */
       case 'h':
-          printf("At least one of the following arguments must be passed, "
-            "more than one may be passed:\n"
-            "'-u' will select possible characters from uppercase letters (A, B, C ... Z)\n"
-            "'-l' will select possible characters from lowercase letters (a, b, c ... z)\n"
-            "'-s' will select possible characters from symbols (~, @, #, &)\n"
-            "'-d' will select possible characters from digits (0, 1, 2 ... 9)\n"
-            "'-a' will select possible characters from all of the above\n"
-            "'-h' will print this help message\n"
-            "The final argument must be a number representing the desired password length.\n");
+        printf("%s", help_message);
+        exit(0);
         break;
 
     }
-
   }
 
 }
 
 /* ***************************************************************** */
-/*                                                                   */
-/*                                                                   */
+/* ERROR CHECKER                                                     */
 /* ***************************************************************** */
 
-/* Ensure correct input */
+/* Ensure that the passed argument is a number */
 bool
-error_checking (char *ch)
+is_number (char *str)
 {
 
-  /* Ensure that the final argument is a number */
-  char *tmp_pointer = ch;
-  bool number_found = true;
-  while(*tmp_pointer != '\0')
+  char *tmp_pointer = str;
+  while(*tmp_pointer != '\0' && *tmp_pointer != ' ')
   {
     if(*tmp_pointer < 48 || *tmp_pointer > 57)
     {
-      printf("The final argument must be a number representing the desired password length.\n"
-        "Please pass argument '-h' for instructions.\n");
-      exit(0);
+			return false;
     }
     tmp_pointer ++;
   }
+	return true;
+
+}
+
+/* Ensure correct input */
+void
+error_checking (char *str)
+{
+
+  /* Ensure that the final argument is a number, exit and print an error if not */
+	if(!is_number(str))
+  {
+    printf("%s", final_arg);
+    exit(0);
+  }
 
   /* Ensure that the user has selected at least one type of character to include
-     in the password */
+     in the password, exit and print an error if not */
   if(!uppercase_letters && !lowercase_letters && !symbols && !digits)
   {
-    printf("You must select at least one type of character to include in your password.\n"
-      "Please pass argument '-h' for instructions.\n");
+    printf("%s", no_chars_selected);
     exit(0);
   }
 
 }
 
 /* ***************************************************************** */
-/*                                                                   */
-/*                                                                   */
+/* MAIN & SETUP                                                      */
 /* ***************************************************************** */
+
+/* Convert the passed character to lowercase */
+char
+upper_to_lower (char ch) 
+{
+  return  ch + 32;
+}
+
+/* Fill up the lowercase array with converted uppercase letters */
+void
+fill_lowercase_array ()
+{
+
+	int i = 0;
+  while(i < 26)
+  {
+    lowercase[i] = upper_to_lower(uppercase[i]);
+    i ++;
+  }
+
+}
+ 
 
 int
 main (int num_args, char **args)
@@ -237,7 +302,7 @@ main (int num_args, char **args)
 	/* No arguments presented, exit */
   if(num_args == 1)
   {
-		printf("No arguments passed.\nPlease pass argument '-h' for instructions.\n");
+		printf("%s", no_args);
 		exit(0);
   }
 
@@ -246,38 +311,31 @@ main (int num_args, char **args)
      characters as options */
   while (num_args > 1)
   {
-
     num_args --, args ++;
     if (**args == '-')
     {
-      scanargs(*args);
+      scan_argument(*args);
     }
-
   }
 
+	/* args is now pointing to the final argument */
+  on_final_arg = true;
+	/* Check for problems */
   error_checking(*args);
-
+	/* Fill the array of lowercase letters */
+	fill_lowercase_array();
   /* At the final argument,
    argument is a number,
    user has selected at least one type of character
    generate the password */
-  int time_1 = time(NULL);
-  int time_2 = time(NULL);
-  while(1)
-  {
-    if(time_1 != time_2)
-    {
-      time_2 = time(NULL);
-      generate(atoi(*args));
-    }
-    time_1 = time(NULL);
-  }
+  generate(atoi(*args));
 
+	/* Done */
   exit(0);
 
 }
 
 /* ***************************************************************** */
 /*                                                                   */
-/*                                                                   */
 /* ***************************************************************** */
+
