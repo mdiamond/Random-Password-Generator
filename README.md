@@ -18,6 +18,6 @@ A program that will generate a random sequence of characters of a given length a
 
 -c: use a custom seed for generating random numbers (must be followed by an unsigned integer that you wish to use as a seed)
 
--h: print a help message information about how to use the program
+-h: print a help message containing information about how to use the program
 
 The final argument must be a number representing the desired password length.
